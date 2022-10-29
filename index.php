@@ -1,5 +1,6 @@
 <?php
 require_once 'helpers.php';
+require_once 'utils.php';
 $is_auth = rand(0, 1);
 
 $user_name = 'the-nepodarok'; // укажите здесь ваше имя
@@ -270,7 +271,7 @@ $posts = [
                     <!--содержимое для поста-текста-->
                     <p>
                         <!--здесь текст-->
-                        <?= $post['post_content']; ?>
+                        <?= slice_string($post['post_content']); ?>
                     </p>
                     <?php break; ?>
 

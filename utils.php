@@ -11,18 +11,22 @@
 
 function slice_string($string, $max_post_length = 300)
 {
-    if (mb_strlen($string) > $max_post_length) {
-        $words = explode(' ', $string);
+    $result_string = $string;
+
+    if (mb_strlen($result_string) > $max_post_length) {
+        $words = explode(' ', $result_string);
         $i = 0;
         $result_string = '';
+        $addition = '...' . '/n' . 'Читать далее'; // для полного соответствия заданию, где показано, что текст должен обрезаться С УЧЁТОМ добавляемых нами ссылки и многоточий (я тестировал на тексте про озеро);
 
-        while (mb_strlen($result_string . ' ' . $words[$i]) < $max_post_length) {
-            $result_string = $result_string . ' ' . $words[$i];
+        while (mb_strlen($result_string . ' ' . $words[$i] . $addition) < $max_post_length) {
+            $result_string .= ' ' . $words[$i];
             $i++;
         }
-        $result_string = '<p>' . trim($result_string) . '...</p><a class="post-text__more-link" href="#">Читать далее</a>';
-    } else {
-        $result_string = '<p>' . trim($string) . '</p>';
+
+        $result_string = '<p>' . trim($result_string, '/ :–-,;') . '...</p><a class="post-text__more-link" href="#">Читать далее</a>';
+        // trim нужен здесь, потому что пробел в начале параграфа добавляется на этапе цикла и trim в начале (равно как и в конце) не поможет;
+        // знаки препинания я всё-таки убираю, потому что в задании как бы требуется, чтобы строка обрезалась именно по слову;
     }
 
     return $result_string;
@@ -30,15 +34,16 @@ function slice_string($string, $max_post_length = 300)
 
 //  Второй вариант функции
 
-function alt_slice_string($string, $max_post_length = 300)
+function slice_string_2($string, $max_post_length = 300)
 {
-    if (mb_strlen($string) <= $max_post_length) {
-        $result_string = '<p>' . trim($string) . '</p>';
-    } else {
-        $temp_string = mb_substr($string, 0, $max_post_length);
-        $result_string = '<p>' . trim(mb_substr($temp_string, 0, mb_strripos($temp_string, ' '))) .
+    $result_string = trim($string);
+    $addition = '...' . '/n' . 'Читать далее'; // для полного соответствия заданию, текст вместе с $addition не превышает указанный лимит
+
+    if (mb_strlen($result_string) > $max_post_length) {
+        $temp_string = mb_substr($string, 0, $max_post_length - mb_strlen($addition));
+        $result_string = '<p>' . mb_substr($temp_string, 0, mb_strripos($temp_string, ' ')) .
             '...</p><a class="post-text__more-link" href="#">Читать далее</a>';
     }
 
-    return trim($result_string);
+    return $result_string;
 }
