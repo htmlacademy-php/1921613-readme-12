@@ -44,11 +44,6 @@ $query = 'SELECT p.*,
              JOIN content_type AS ct
                 ON p.content_type_id = ct.id';
 
-if ($sort_by_likes) {
-    $query .= " JOIN fav_list AS fl
-                   ON fl.post_id = p.id";
-} // сортировка по лайкам
-
 if ($type_id) {
     $query .= " WHERE p.content_type_id = $type_id";
 } // фильтрация по типу

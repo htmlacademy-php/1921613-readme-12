@@ -1,5 +1,9 @@
 <?php
 
+// константа для пути сохранения файлов, загружаемых из формы
+define('UPLOAD_PATH', 'uploads/');
+
+// часовой пояс по умолчанию
 date_default_timezone_set('Europe/Moscow');
 
 /**
@@ -11,7 +15,6 @@ date_default_timezone_set('Europe/Moscow');
  * @return string Возвращает строку, обрезанную до $max_post_length, либо исходную строку без изменений,
  * если лимит символов не превышен
  */
-
 function slice_string($string, $link = '', $max_post_length = 300)
 {
     $result_string = trim($string);
@@ -38,7 +41,6 @@ function slice_string($string, $link = '', $max_post_length = 300)
 }
 
 //  Второй вариант функции
-
 function slice_string_2($string, $max_post_length = 300)
 {
     $result_string = trim($string);
@@ -59,7 +61,6 @@ function slice_string_2($string, $max_post_length = 300)
  * Заменяет потенциально опасные символы в являющемся строкой элементе на HTML-мнемоники, делая текст безопасным для вывода на страницу
  * @param mixed $value Входящий элемент любого типа
  */
-
 function secure(&$value)
 {
     if (is_string($value)) {
@@ -73,7 +74,6 @@ function secure(&$value)
  * @param string $date Дата в виде строки
  * @return string Строка с датой в формате «дд.мм.гггг чч:мм»
  */
-
 function get_title_date($date)
 {
     $date = strtotime($date);
@@ -93,7 +93,6 @@ function get_title_date($date)
  * @param string $date Дата, с которой начинается отсчёт
  * @return string Строка, отражающая количество времени, прошедшего с $date
  */
-
 function format_date($date)
 {
     $post_date = date_create($date);
@@ -217,6 +216,119 @@ function trim_link(string $link_text): string
  * @param array $params Массив с данными для передачи из сценария в шаблон
  * @param string $main_content Основное содержимое страницы, передаваемое в шаблон
  */
-function build_page($page, $params, $main_content): string {
+function build_page($page, $params, $main_content): string
+{
     return include_template($page, $params + ['main_content' => $main_content]);
+}
+
+/**
+ * Возвращает значение поля input из данных формы
+ *
+ * @param string $name Атрибут name поля input
+ */
+function getPostVal($name)
+{
+    return $_POST[$name] ?? '';
+}
+
+/**
+ * Валидирует загруженный файл
+ *
+ * @param string $page Название поля input, из которого загружается файл
+ * @param array $allowed_types Массив с разрешёнными MIME-типами файлов
+ * @return boolean Булево значение проверки
+ */
+function validateFile($resource, $allowed_types)
+{
+    $validity = false;
+    if (isset($_FILES[$resource]) && !empty($_FILES[$resource]['name'])) {
+        $file_info = finfo_open(FILEINFO_MIME_TYPE);
+        $file_name = $_FILES[$resource]['tmp_name'];
+        $file_size = $_FILES[$resource]['size'];
+        $file_type = finfo_file($file_info, $file_name);
+
+        if (in_array($file_type, $allowed_types) && $file_size < 200000) {
+            $validity = true;
+        }
+    }
+    return $validity;
+}
+
+/**
+ * Загружает файл из input с типом file и перемещает полученный файл в папку uploads в корне проекта
+ *
+ * @param string $resource Ключ массива $_FILES
+ * @return string Путь к загруженному и перемещённому файлу
+ */
+function uploadFile($resource)
+{
+    $file_name = $_FILES[$resource]['name'];
+    $file_path = UPLOAD_PATH . $file_name;
+    move_uploaded_file($_FILES[$resource]['tmp_name'], $file_path);
+
+    return $file_path;
+}
+
+/**
+ * Загружает файл по ссылке из текстового поля формы и перемещает полученный файл в папку uploads в корне проекта
+ *
+ * @param string $field Название (name) поля формы
+ * @return string Путь к загруженному файлу
+ */
+function uploadFileFromURL($field)
+{
+    $file = file_get_contents($_POST[$field]);
+    $file_name = uniqid($field . '_');
+    $file_path = UPLOAD_PATH . $file_name;
+
+    file_put_contents($file_path, $file);
+
+    // добавление расширения файла
+    $file_info = finfo_open(FILEINFO_MIME_TYPE);
+    $file_info = finfo_file($file_info, $file_path);
+    $ext = substr($file_info, '6');
+    $file_url = "uploads/$file_name.$ext";
+
+    rename($file_path, $file_url);
+
+    return $file_url;
+}
+
+/**
+ * Проверят валидность ссылки с обязательной частью path после адреса хоста
+ *
+ * @param string $url Ссылка
+ * @return boolean Валидность ссылки
+ */
+function checkURL($url)
+{
+    $url_validity = false;
+
+    if (parse_url($url, PHP_URL_PATH) && filter_var($url, FILTER_VALIDATE_URL)) {
+
+        // проверка доступности и работоспособности ссылки
+        $response = get_headers($url);
+        if (stripos($response[0], "200 OK")) {
+            $url_validity = true;
+        }
+    }
+
+    return $url_validity;
+}
+
+/**
+ * Формирует и выводит шаблон блока с текстом ошибки заполнения поля на основе массива ошибок
+ *
+ * @param array $err Массив с ошибками
+ * @param string $field_name Название поля
+ * @return string Итоговый HTML-шаблон
+ */
+function show_error_msg($err, $field_name) {
+
+    $err_msg = isset($err[$field_name]) ? '<b>' . explode('.', $err[$field_name])[0] . '</b>.' . explode('.', $err[$field_name])[1] : '';
+
+    return include_template('add-post_error_template.php', [
+        'errors' => $err,
+        'err_msg' => $err_msg,
+    ]);
 }
