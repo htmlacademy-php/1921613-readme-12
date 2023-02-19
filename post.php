@@ -33,13 +33,21 @@ if ($post_id > 0) {
 
 } else { // обработка ошибки запроса
     $error_page = include_template('page-404.php', ['main_content' => 'Запрос сформирован неверно!']);
-    die(build_page('layout.php', ['page_title' => 'Ошибка запроса'], $error_page));
+    die(build_page('layout.php', [
+        'page_title' => 'Ошибка запроса',
+        'db_connection' => $db_connection,
+        'active_page' => ''
+    ], $error_page));
 }
 
 if (!$post) {
     // обработка ошибки несуществующей публикации
     $error_page = include_template('page-404.php', ['main_content' => 'Публикация не найдена']);
-    die(build_page('layout.php', ['page_title' => 'Ошибка 404'], $error_page));
+    die(build_page('layout.php', [
+        'page_title' => 'Ошибка 404',
+        'db_connection' => $db_connection,
+        'active_page' => ''
+    ], $error_page));
 }
 
 array_walk_recursive($post, 'secure'); // обезопасить данные страницы
