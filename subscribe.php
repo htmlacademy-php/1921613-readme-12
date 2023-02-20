@@ -8,13 +8,8 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\Mailer\Mailer;
-use Symfony\Component\Mime\Email;
-
 require_once 'utils.php';
 require_once 'db_config.php';
-require_once 'email_config.php';
 
 // параметр запроса пользователя
 $user_id = filter_input(INPUT_GET, 'user_id', FILTER_SANITIZE_NUMBER_INT);
@@ -34,6 +29,9 @@ if ($user_exists and $user_id !== $_SESSION['user']['id']) {
                   WHERE following_user_id = ' . $_SESSION['user']['id'] . '
                   AND followed_user_id = ' . $user_id;
     } else {
+        // подключение конфиг. данных для e-mail рассылки
+        require_once 'email_config.php';
+
         // запрос на подписку на пользователя
         $query = 'INSERT INTO follower_list
                          (following_user_id, followed_user_id)
@@ -50,7 +48,7 @@ if ($user_exists and $user_id !== $_SESSION['user']['id']) {
         $user_email = $user_data['user_email'];
 
         // Формирование e-mail сообщения
-        $message = new Email();
+        $message = new Symfony\Component\Mime\Email();
         $message->to($user_data['user_email']);
         $message->from('readme_blog_noreply@list.ru');
         $message->subject("У вас новый подписчик");
@@ -59,10 +57,10 @@ if ($user_exists and $user_id !== $_SESSION['user']['id']) {
                              '. Вот ссылка на его профиль: readme/profile.php?user_id=' . $_SESSION['user']['id']);
 
         // Отправка сообщения
-        $mailer = new Mailer($transport);
+        $mailer = new Symfony\Component\Mailer\Mailer($transport);
         try {
             $mailer->send($message);
-        } catch (TransportExceptionInterface $e) {
+        } catch (Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
             $_SESSION['errors'] = 'Cannot send message, ' . $e->getMessage();
         }
     }

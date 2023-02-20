@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 
 // Перенаправление анонимного пользователя
@@ -12,10 +13,10 @@ require_once 'utils.php';
 require_once 'db_config.php';
 
 // параметр запроса ID пользователя для переписки
-$user_id = filter_input(INPUT_GET, 'user_id', FILTER_SANITIZE_NUMBER_INT);
+$user_id = (int)filter_input(INPUT_GET, 'user_id', FILTER_SANITIZE_NUMBER_INT);
 
 // проверка существования пользователя
-$user_exists = check_user($db_connection, $user_id ?? 0);
+$user_exists = check_user($db_connection, $user_id);
 
 // запрос для получения списка переписок
 $query = 'SELECT u.id,

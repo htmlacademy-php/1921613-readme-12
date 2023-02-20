@@ -197,32 +197,6 @@ function get_data_from_db(mysqli $src_db, string $query, string $mode = 'all')
 }
 
 /**
- * Приводит ссылки к единому виду, добавляя протокол https (если работает) или http
- *
- * @param string $url Текст ссылки
- */
-function prepend_url_scheme(string $url): string
-{
-    if (filter_var($url, FILTER_VALIDATE_URL)) {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-
-        if ($scheme) {
-            $url = str_replace($scheme, '', $url);
-        }
-
-        $http = 'http' . $url;
-        $https = 'https' . $url;
-
-        if (get_headers($http) && get_headers($https)) {
-            $url = $https;
-        } else {
-            $url = $http;
-        }
-    }
-    return $url;
-}
-
-/**
  * Заполняет элемент массива ошибок
  *
  * @param array $err Массив для заполнения
@@ -700,9 +674,9 @@ function check_user($db, $user_id) {
  */
 function get_unread_msg_count($db) {
     $query = 'SELECT COUNT(id) FROM message
-              WHERE message_receiver_id =
-                ' . $_SESSION['user']['id'] .
-        ' AND is_read = 0';
+              WHERE message_receiver_id = '
+                  . $_SESSION['user']['id'] . '
+                  AND is_read = 0';
     return get_data_from_db($db, $query, 'one');
 }
 

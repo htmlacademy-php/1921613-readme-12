@@ -8,13 +8,9 @@ if (!isset($_SESSION['user'])) {
     exit;
 }
 
-use Symfony\Component\Mailer\Mailer;
-use Symfony\Component\Mime\Email;
-
 require_once 'helpers.php';
 require_once 'utils.php';
 require_once 'db_config.php';
-require_once 'email_config.php';
 
 $content_types = $_SESSION['ct_types']; // типы контента
 $post_type_options = array_column($content_types, 'type_val'); // перечень допустимых параметров
@@ -151,6 +147,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Обработка полученных данных в случае правильного заполнения всех полей и добавление новой публикации в БД
     if (empty($errors)) {
+        // подключение конфиг. данных для e-mail рассылки
+        require_once 'email_config.php';
+
         // получение id типа контента в зав-ти от формы
         $content_type_values = array_column($content_types, 'type_val', 'id');
         $content_type_id = array_search($post_type, $content_type_values);
@@ -235,7 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         foreach ($followers as $follower) {
             // Формирование e-mail сообщения
-            $message = new Email();
+            $message = new Symfony\Component\Mime\Email();
             $message->to($follower['user_email']);
             $message->from('readme_blog_noreply@list.ru');
             $message->subject('Новая публикация от пользователя ' . $_SESSION['user']['user_name']);
@@ -245,10 +244,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                  Посмотрите её на странице пользователя: readme/profile.php?user_id=' . $_SESSION['user']['id']);
 
             // Отправка сообщения
-            $mailer = new Mailer($transport);
+            $mailer = new Symfony\Component\Mailer\Mailer($transport);
             try {
                 $mailer->send($message);
-            } catch (TransportExceptionInterface $e) {
+            } catch (\Symfony\Component\Mailer\Exception\TransportExceptionInterface $e) {
                 $_SESSION['errors'] = 'Cannot send message, ' . $e->getMessage();
             }
         }
