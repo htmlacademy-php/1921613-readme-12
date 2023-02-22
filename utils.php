@@ -168,29 +168,28 @@ function format_date($date)
  */
 function get_data_from_db(mysqli $src_db, string $query, string $mode = 'all')
 {
+    $data = [];
     $result = mysqli_query($src_db, $query);
 
-    if (!$result) {
+    if ($result) {
+        switch ($mode) {
+            case 'all':
+                $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
+                break;
+            case 'row':
+                $data = mysqli_fetch_assoc($result);
+                break;
+            case 'col':
+                $data = mysqli_fetch_all($result);
+                $data = array_column($data, 0);
+                break;
+            case 'one':
+                $data = mysqli_fetch_row($result)[0];
+                break;
+        }
+    } else {
         echo mysqli_error($src_db);
-        exit();
-    }
-
-    switch ($mode) {
-        case 'all':
-            $data = mysqli_fetch_all($result, MYSQLI_ASSOC);
-            break;
-        case 'row':
-            $data = mysqli_fetch_assoc($result);
-            break;
-        case 'col':
-            $data = mysqli_fetch_all($result);
-            $data = array_column($data, 0);
-            break;
-        case 'one':
-            $data = mysqli_fetch_row($result)[0];
-            break;
-        default:
-            $data = [];
+        exit;
     }
 
     return $data;
@@ -254,6 +253,7 @@ function validate_image_type($field_name)
 function download_file_from_url(&$err, $url, $destination = UPLOAD_PATH)
 {
     $result = false;
+    $err_text = '';
     $err_heading = 'Ссылка из интернета';
     $file_extension = pathinfo($url, PATHINFO_EXTENSION) ?? '';
 
@@ -269,25 +269,10 @@ function download_file_from_url(&$err, $url, $destination = UPLOAD_PATH)
             $file_path = $destination . $file_name;
 
             if (file_put_contents($file_path, $file_content)) {
-                $file_type = mime_content_type($file_path);
-
-                // проверка настоящего типа файла
-                if (in_array($file_type, ALLOWED_IMG_TYPES)) {
-                    // проверка размера файла
-                    if (filesize($file_path) < MAX_FILE_SIZE) {
-                        clearstatcache();
-                        $result = $file_name;
-                    } else {
-                        $err_type = 'Размер файла';
-                        $err_text = 'Размер файла не должен превышать ' . MAX_FILE_SIZE_USER . ' Мб';
-                    }
-                } else {
-                    $err_type = 'Неверный тип файла';
-                    $err_text = 'Файл по ссылке не является изображением в формате jpg, png или gif';
-                }
+                $result = validate_file($err, $err_heading, 'photo-url', $file_path) ? $file_name : false;
             } else {
                 $err_type = 'Ошибка копирования файла';
-                $err_heading = 'Не удалось загрузить файл на сервер. Попробуйте снова позднее';
+                $err_text = 'Не удалось загрузить файл на сервер. Попробуйте снова позднее';
             }
             // удаление невалидного файла
             if (!$result) {
@@ -302,11 +287,47 @@ function download_file_from_url(&$err, $url, $destination = UPLOAD_PATH)
         $err_text = 'Файл по ссылке не является изображением в формате jpg, png или gif';
     }
 
-    if (!$result) {
+    if ($err_text) {
         fill_errors($err, 'photo-url', $err_type, $err_heading, $err_text);
     }
 
     return $result;
+}
+
+/**
+ * Валидирует переданный файл по mime-типу и размеру, заполняя переданный по ссылке массив ошибками
+ *
+ * @param &$err array Массив для заполнения ошибками валидации
+ * @param $err_heading string Заголовок текста ошибки
+ * @param $field_name string Название поля формы
+ * @param $file_path string Путь до файла
+ * @return boolean Значение валидации
+ */
+function validate_file(&$err, $err_heading, $field_name, $file_path) {
+    $valid_file = false;
+
+    // проверка настоящего типа файла
+    $file_type = mime_content_type($file_path);
+    if (in_array($file_type, ALLOWED_IMG_TYPES)) {
+        // проверка размера файла
+        if (filesize($file_path) < MAX_FILE_SIZE) {
+            clearstatcache();
+            $valid_file = true;
+        } else {
+            $err_type = 'Размер файла';
+            $err_text = 'Размер файла не должен превышать ' . MAX_FILE_SIZE_USER . ' Мб';
+        }
+    } else {
+        $err_type = 'Неверный тип файла';
+        $err_text = 'Файл по ссылке не является изображением в формате jpg, png или gif';
+    }
+
+    // заполнение массива ошибками
+    if (!$valid_file) {
+        fill_errors($err, $field_name, $err_type, $err_heading, $err_text);
+    }
+
+    return $valid_file;
 }
 
 /**
